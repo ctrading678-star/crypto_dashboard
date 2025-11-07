@@ -81,3 +81,4 @@ if st.button("📈 تحميل البيانات"):
                     file_name=f"{symbol}_data.csv",
                     mime="text/csv"
                 )
+
