@@ -1,99 +1,74 @@
 import streamlit as st
 import yfinance as yf
 import pandas as pd
-import plotly.graph_objects as go
+import plotly.express as px
 from datetime import date, timedelta
 
-st.set_page_config(page_title="Crypto Dashboard", layout="wide")
+# =========================
+# إعداد الصفحة
+# =========================
+st.set_page_config(page_title="📊 تحليل العملات الرقمية", layout="wide")
+st.title("💰 لوحة تحليل العملات الرقمية (Crypto Dashboard)")
 
-st.title("📊 لوحة متابعة العملات الرقمية")
+# =========================
+# قائمة أشهر 40 عملة رقمية
+# =========================
+crypto_list = [
+    "BTC-USD", "ETH-USD", "BNB-USD", "SOL-USD", "XRP-USD", "ADA-USD", "DOGE-USD",
+    "AVAX-USD", "TRX-USD", "DOT-USD", "MATIC-USD", "LTC-USD", "SHIB-USD", "UNI-USD",
+    "BCH-USD", "LINK-USD", "XLM-USD", "ATOM-USD", "ETC-USD", "HBAR-USD",
+    "ICP-USD", "APT-USD", "VET-USD", "FIL-USD", "NEAR-USD", "QNT-USD",
+    "AAVE-USD", "GRT-USD", "ALGO-USD", "SAND-USD", "EGLD-USD", "AXS-USD",
+    "MANA-USD", "THETA-USD", "FTM-USD", "XTZ-USD", "XMR-USD", "KAS-USD",
+    "IMX-USD", "RUNE-USD"
+]
 
-# قائمة أشهر 40 عملة رقمية (رموز Yahoo Finance)
-crypto_symbols = {
-    "Bitcoin (BTC)": "BTC-USD",
-    "Ethereum (ETH)": "ETH-USD",
-    "Binance Coin (BNB)": "BNB-USD",
-    "Solana (SOL)": "SOL-USD",
-    "Cardano (ADA)": "ADA-USD",
-    "XRP (XRP)": "XRP-USD",
-    "Dogecoin (DOGE)": "DOGE-USD",
-    "Avalanche (AVAX)": "AVAX-USD",
-    "Polkadot (DOT)": "DOT-USD",
-    "Chainlink (LINK)": "LINK-USD",
-    "Polygon (MATIC)": "MATIC-USD",
-    "Litecoin (LTC)": "LTC-USD",
-    "Shiba Inu (SHIB)": "SHIB-USD",
-    "Uniswap (UNI)": "UNI-USD",
-    "Bitcoin Cash (BCH)": "BCH-USD",
-    "Stellar (XLM)": "XLM-USD",
-    "Cosmos (ATOM)": "ATOM-USD",
-    "VeChain (VET)": "VET-USD",
-    "Internet Computer (ICP)": "ICP-USD",
-    "Aave (AAVE)": "AAVE-USD",
-    "Filecoin (FIL)": "FIL-USD",
-    "Maker (MKR)": "MKR-USD",
-    "The Graph (GRT)": "GRT-USD",
-    "Algorand (ALGO)": "ALGO-USD",
-    "Tezos (XTZ)": "XTZ-USD",
-    "Decentraland (MANA)": "MANA-USD",
-    "EOS (EOS)": "EOS-USD",
-    "IOTA (IOTA)": "IOTA-USD",
-    "Axie Infinity (AXS)": "AXS-USD",
-    "SAND (The Sandbox)": "SAND-USD",
-    "Fantom (FTM)": "FTM-USD",
-    "NEAR Protocol (NEAR)": "NEAR-USD",
-    "Curve DAO (CRV)": "CRV-USD",
-    "THETA (THETA)": "THETA-USD",
-    "OKB (OKB)": "OKB-USD",
-    "Lido DAO (LDO)": "LDO-USD",
-    "Injective (INJ)": "INJ-USD",
-    "Rocket Pool (RPL)": "RPL-USD",
-    "Aptos (APT)": "APT-USD",
-    "Arbitrum (ARB)": "ARB-USD"
-}
+# =========================
+# واجهة المستخدم
+# =========================
+symbol = st.selectbox("🔸 اختر العملة:", crypto_list)
 
-# --- اختيار العملة والفترة الزمنية ---
-col1, col2 = st.columns(2)
+mode = st.radio("🗓️ اختر طريقة تحديد الفترة:", ["آخر عدد من الأيام", "تحديد تاريخين"])
 
-with col1:
-    selected_crypto = st.selectbox("🪙 اختر العملة الرقمية", list(crypto_symbols.keys()))
-
-with col2:
-    days = st.slider("📆 عدد الأيام السابقة", 7, 365, 90)
-
-# --- تحميل البيانات ---
-symbol = crypto_symbols[selected_crypto]
-start_date = date.today() - timedelta(days=days)
-end_date = date.today()
-
-st.info(f"جلب البيانات من {start_date} إلى {end_date} ...")
-
-data = yf.download(symbol, start=start_date, end=end_date)
-
-if data.empty:
-    st.error("⚠️ لم يتم العثور على بيانات لهذه العملة.")
+if mode == "آخر عدد من الأيام":
+    days = st.slider("عدد الأيام:", 7, 365, 90)
+    start_date = date.today() - timedelta(days=days)
+    end_date = date.today()
 else:
-    st.subheader(f"💹 الرسم البياني لـ {selected_crypto}")
-    
-    # --- رسم الشموع اليابانية ---
-    fig = go.Figure(data=[go.Candlestick(
-        x=data.index,
-        open=data['Open'],
-        high=data['High'],
-        low=data['Low'],
-        close=data['Close'],
-        name='Candlestick'
-    )])
-    
-    fig.update_layout(
-        xaxis_rangeslider_visible=False,
-        template='plotly_dark',
-        height=500
-    )
-    
-    st.plotly_chart(fig, use_container_width=True)
+    start_date = st.date_input("من تاريخ:", date.today() - timedelta(days=90))
+    end_date = st.date_input("إلى تاريخ:", date.today())
 
-    # --- عرض الجدول ---
-    st.subheader("📄 البيانات الخام")
-    st.dataframe(data.tail(20))
+# =========================
+# اختيار الإطار الزمني
+# =========================
+interval = st.selectbox(
+    "⏱️ اختر الإطار الزمني:",
+    ["1h", "4h", "1d", "1wk", "1mo"],
+    index=2,
+    help="مثال: 1h = كل ساعة، 1d = يومي، 1wk = أسبوعي"
+)
 
+# =========================
+# تحميل البيانات
+# =========================
+if st.button("📈 تحميل البيانات"):
+    with st.spinner("جاري تحميل بيانات السوق..."):
+        data = yf.download(symbol, start=start_date, end=end_date, interval=interval)
+
+        if not data.empty:
+            st.success(f"✅ تم تحميل بيانات {symbol} للفترة المحددة")
+
+            # عرض آخر 10 صفوف
+            st.dataframe(data.tail(10), use_container_width=True)
+
+            # رسم بياني تفاعلي
+            fig = px.line(
+                data,
+                x=data.index,
+                y="Close",
+                title=f"📉 حركة سعر {symbol} ({interval})",
+                labels={"Close": "سعر الإغلاق", "index": "التاريخ"}
+            )
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.warning("⚠️ لم يتم العثور على بيانات للفترة أو الإطار الزمني المحدد.")
