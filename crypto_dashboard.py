@@ -31,11 +31,11 @@ symbol = st.selectbox("🔸 اختر العملة:", crypto_list)
 mode = st.radio("🗓️ اختر طريقة تحديد الفترة:", ["آخر عدد من الأيام", "تحديد تاريخين"])
 
 if mode == "آخر عدد من الأيام":
-    days = st.slider("عدد الأيام:", 7, 365, 90)
+    days = st.slider("عدد الأيام:", 7, 730, 350)
     start_date = date.today() - timedelta(days=days)
     end_date = date.today()
 else:
-    start_date = st.date_input("من تاريخ:", date.today() - timedelta(days=90))
+    start_date = st.date_input("من تاريخ:", date.today() - timedelta(days=350))
     end_date = st.date_input("إلى تاريخ:", date.today())
 
 interval = st.selectbox(
@@ -49,32 +49,39 @@ interval = st.selectbox(
 # تحميل البيانات
 # =========================
 if st.button("📈 تحميل البيانات"):
-    with st.spinner("جاري تحميل بيانات السوق..."):
+    with st.spinner("⏳ جاري تحميل بيانات السوق..."):
         data = yf.download(symbol, start=start_date, end=end_date, interval=interval)
 
+        # تنظيف البيانات والتحقق
         if data.empty:
             st.warning("⚠️ لم يتم العثور على بيانات للفترة أو الإطار الزمني المحدد.")
         else:
-            # نتأكد أن العمود 'Close' موجود
+            # الاحتفاظ بآخر 350 صف فقط
+            data = data.tail(350).copy()
+            data.reset_index(inplace=True)
+
+            # التأكد من وجود العمود 'Close'
             if "Close" not in data.columns:
-                st.error("❌ لا يمكن رسم البيانات: العمود 'Close' غير موجود في النتائج.")
+                st.error("❌ لا يمكن الرسم: العمود 'Close' غير موجود في البيانات.")
                 st.dataframe(data.head(), use_container_width=True)
             else:
-                st.success(f"✅ تم تحميل بيانات {symbol} ({len(data)} صفوف)")
+                st.success(f"✅ تم تحميل {len(data)} نقطة من بيانات {symbol}")
+
                 st.dataframe(data.tail(10), use_container_width=True)
 
-                # الرسم البياني
+                # إنشاء الرسم
                 fig = px.line(
-                    data.reset_index(),
-                    x="Date" if "Date" in data.columns else data.index.name or "index",
+                    data,
+                    x=data.columns[0],  # أول عمود عادة هو التاريخ
                     y="Close",
-                    title=f"📉 حركة سعر {symbol} ({interval})",
-                    labels={"Close": "سعر الإغلاق", "Date": "التاريخ"}
+                    title=f"📉 حركة سعر {symbol} - آخر {len(data)} شمعة",
+                    labels={"Close": "سعر الإغلاق", data.columns[0]: "التاريخ"}
                 )
+
                 st.plotly_chart(fig, use_container_width=True)
 
-                # خيار تحميل CSV
-                csv = data.to_csv().encode('utf-8')
+                # تحميل CSV
+                csv = data.to_csv(index=False).encode('utf-8')
                 st.download_button(
                     label="⬇️ تحميل البيانات كملف CSV",
                     data=csv,
