@@ -38,9 +38,6 @@ else:
     start_date = st.date_input("من تاريخ:", date.today() - timedelta(days=90))
     end_date = st.date_input("إلى تاريخ:", date.today())
 
-# =========================
-# اختيار الإطار الزمني
-# =========================
 interval = st.selectbox(
     "⏱️ اختر الإطار الزمني:",
     ["1h", "4h", "1d", "1wk", "1mo"],
@@ -55,20 +52,32 @@ if st.button("📈 تحميل البيانات"):
     with st.spinner("جاري تحميل بيانات السوق..."):
         data = yf.download(symbol, start=start_date, end=end_date, interval=interval)
 
-        if not data.empty:
-            st.success(f"✅ تم تحميل بيانات {symbol} للفترة المحددة")
-
-            # عرض آخر 10 صفوف
-            st.dataframe(data.tail(10), use_container_width=True)
-
-            # رسم بياني تفاعلي
-            fig = px.line(
-                data,
-                x=data.index,
-                y="Close",
-                title=f"📉 حركة سعر {symbol} ({interval})",
-                labels={"Close": "سعر الإغلاق", "index": "التاريخ"}
-            )
-            st.plotly_chart(fig, use_container_width=True)
-        else:
+        if data.empty:
             st.warning("⚠️ لم يتم العثور على بيانات للفترة أو الإطار الزمني المحدد.")
+        else:
+            # نتأكد أن العمود 'Close' موجود
+            if "Close" not in data.columns:
+                st.error("❌ لا يمكن رسم البيانات: العمود 'Close' غير موجود في النتائج.")
+                st.dataframe(data.head(), use_container_width=True)
+            else:
+                st.success(f"✅ تم تحميل بيانات {symbol} ({len(data)} صفوف)")
+                st.dataframe(data.tail(10), use_container_width=True)
+
+                # الرسم البياني
+                fig = px.line(
+                    data.reset_index(),
+                    x="Date" if "Date" in data.columns else data.index.name or "index",
+                    y="Close",
+                    title=f"📉 حركة سعر {symbol} ({interval})",
+                    labels={"Close": "سعر الإغلاق", "Date": "التاريخ"}
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
+                # خيار تحميل CSV
+                csv = data.to_csv().encode('utf-8')
+                st.download_button(
+                    label="⬇️ تحميل البيانات كملف CSV",
+                    data=csv,
+                    file_name=f"{symbol}_data.csv",
+                    mime="text/csv"
+                )
